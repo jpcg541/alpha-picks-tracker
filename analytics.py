@@ -78,37 +78,37 @@ def get_stats():
     last_30d = [(now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(30)]
     
     # We need:
-    # web_total (index 0)
+    # desktop_total (index 0)
     # mobile_total (index 1)
-    # web daily keys (indices 2 to 31)
+    # desktop daily keys (indices 2 to 31)
     # mobile daily keys (indices 32 to 61)
     
     cmds = [
-        ["GET", f"visits:{app_key}:web:total"],
+        ["GET", f"visits:{app_key}:desktop:total"],
         ["GET", f"visits:{app_key}:mobile:total"]
     ]
     for d in last_30d:
-        cmds.append(["GET", f"visits:{app_key}:web:{d}"])
+        cmds.append(["GET", f"visits:{app_key}:desktop:{d}"])
     for d in last_30d:
         cmds.append(["GET", f"visits:{app_key}:mobile:{d}"])
         
     results = _upstash_request(cmds)
     
     if not results or not isinstance(results, list):
-        return {k: "N/A" for k in ["mobile_7d", "mobile_30d", "mobile_total", "web_7d", "web_30d", "web_total"]}
+        return {k: "N/A" for k in ["mobile_7d", "mobile_30d", "mobile_total", "desktop_7d", "desktop_30d", "desktop_total"]}
 
     def parse_val(r):
         if r is None or "result" not in r: return 0
         try: return int(r["result"] or 0)
         except: return 0
 
-    web_total = parse_val(results[0])
+    desktop_total = parse_val(results[0])
     mobile_total = parse_val(results[1])
     
-    # Web slices
-    web_daily = [parse_val(r) for r in results[2:32]]
-    web_7d = sum(web_daily[:7])
-    web_30d = sum(web_daily)
+    # Desktop slices
+    desktop_daily = [parse_val(r) for r in results[2:32]]
+    desktop_7d = sum(desktop_daily[:7])
+    desktop_30d = sum(desktop_daily)
     
     # Mobile slices
     mobile_daily = [parse_val(r) for r in results[32:62]]
@@ -119,7 +119,7 @@ def get_stats():
         "mobile_7d": mobile_7d,
         "mobile_30d": mobile_30d,
         "mobile_total": mobile_total,
-        "web_7d": web_7d,
-        "web_30d": web_30d,
-        "web_total": web_total
+        "desktop_7d": desktop_7d,
+        "desktop_30d": desktop_30d,
+        "desktop_total": desktop_total
     }

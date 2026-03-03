@@ -545,26 +545,20 @@ def build_focus_options(focus_items: list) -> tuple[list, dict]:
 
 def _show_admin_panel():
     """Renders a compact traffic analytics panel."""
-    # 3. Render Panel
     from analytics import get_stats
-    st.divider()
-    st.markdown("### 📊 Traffic Analytics")
-    
     stats = get_stats()
     
     if "N/A" in stats.values():
-        st.warning("Could not reach Upstash Redis. Using N/A values.")
+        return
     
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Web (7d)", stats["web_7d"])
-    c2.metric("Web (30d)", stats["web_30d"])
-    c3.metric("Web (Total)", stats["web_total"])
-    
-    c4, c5, c6 = st.columns(3)
-    c4.metric("Mobile (7d)", stats["mobile_7d"])
-    c5.metric("Mobile (30d)", stats["mobile_30d"])
-    c6.metric("Mobile (Total)", stats["mobile_total"])
-    st.caption("Timezone: US Eastern. Sessions tracked once.")
+    st.divider()
+    # Compact single-line display
+    st.caption(
+        f"📊 **Traffic** | "
+        f"Desktop: {stats['desktop_7d']} (7d), {stats['desktop_30d']} (30d), {stats['desktop_total']} (Total) · "
+        f"Mobile: {stats['mobile_7d']} (7d), {stats['mobile_30d']} (30d), {stats['mobile_total']} (Total) | "
+        "US Eastern time"
+    )
 
 def main():
     data = load_data()
