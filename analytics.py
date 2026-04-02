@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import time
 from datetime import datetime
 import zoneinfo
 
@@ -13,6 +14,33 @@ def is_mobile(user_agent: str) -> bool:
         return False
     mobile_keywords = ['Android', 'webOS', 'iPhone', 'iPad', 'iPod', 'BlackBerry', 'Windows Phone']
     return any(keyword.lower() in user_agent.lower() for keyword in mobile_keywords)
+
+# --- Plan C: Bot UA Blacklist ---
+MIN_SESSION_SECONDS = 5  # Plan B: minimum dwell time to count as a real visit
+
+BOT_SIGNATURES = [
+    # Generic bot identifiers
+    'bot', 'crawler', 'spider', 'scraper',
+    # HTTP libraries (bots, scripts, CI)
+    'python-requests', 'python-urllib', 'curl/', 'wget/',
+    'go-http-client', 'node-fetch', 'axios', 'okhttp', 'java/',
+    # Search engine crawlers
+    'googlebot', 'bingbot', 'yandexbot', 'duckduckbot',
+    'baiduspider', 'ahrefsbot', 'semrushbot', 'dotbot',
+    # Social media link-preview fetchers
+    'facebookexternalhit', 'twitterbot', 'linkedinbot',
+    'whatsapp', 'slackbot', 'telegrambot', 'discordbot',
+    # Uptime / monitoring tools
+    'uptime', 'pingdom', 'statuscake', 'site24x7',
+    'uptimerobot', 'hetrixtools', 'freshping', 'hyperping',
+]
+
+def is_bot(user_agent: str) -> bool:
+    """Return True if the user agent matches a known bot/crawler/monitor signature."""
+    if not user_agent:
+        return True  # No UA is almost always a non-human client
+    ua_lower = user_agent.lower()
+    return any(sig in ua_lower for sig in BOT_SIGNATURES)
 
 def _upstash_request(cmds: list):
     """Execute a pipeline of commands via Upstash Redis REST API."""
@@ -35,37 +63,53 @@ def _upstash_request(cmds: list):
         return None
 
 def track_visit_once_per_session():
-    """Tracks a visit exactly once per session. Fails open on errors."""
+    """
+    Tracks a visit exactly once per session using a two-gate quality filter:
+      - Plan C (Bot Gate): Silently discards known bots, crawlers, and link-preview fetchers.
+      - Plan B (Dwell Gate): Only counts the visit after the user has been on the page
+        for at least MIN_SESSION_SECONDS seconds, filtering out instant refreshes.
+    Fails open on all errors to avoid breaking the host app.
+    """
+    # Gate 0: Already counted this session — do nothing.
     if st.session_state.get("_av_tracked"):
         return
 
     try:
-        # 1. Get Context
         ua = st.context.headers.get("user-agent", "")
+
+        # Gate 1 — Plan C: Bot UA filter.
+        # If UA matches a known non-human signature, mark as handled and bail.
+        if is_bot(ua):
+            st.session_state["_av_tracked"] = True  # suppress future checks this session
+            return
+
+        # Gate 2 — Plan B: Dwell-time filter.
+        # On first run, stamp the session start time and wait.
+        now = time.time()
+        if "_session_start" not in st.session_state:
+            st.session_state["_session_start"] = now
+            return  # First rerun: start the clock, do not count yet.
+
+        elapsed = now - st.session_state["_session_start"]
+        if elapsed < MIN_SESSION_SECONDS:
+            return  # Not enough dwell time yet — wait for next rerun.
+
+        # === All gates passed: this is a genuine human visit. ===
         app_key = st.secrets.get("APP_ANALYTICS_KEY", "ap_public")
         today = datetime.now(US_EASTERN_TZ).strftime("%Y-%m-%d")
-        
-        # 2. Classify
         device_type = "mobile" if is_mobile(ua) else "desktop"
-        
-        # 3. Prepare Pipeline
-        # We track:
-        # - web:total, web:{date}
-        # - {type}:total, {type}:{date}
+
         cmds = [
             ["INCR", f"visits:{app_key}:web:total"],
             ["INCR", f"visits:{app_key}:web:{today}"],
             ["INCR", f"visits:{app_key}:{device_type}:total"],
             ["INCR", f"visits:{app_key}:{device_type}:{today}"]
         ]
-        
-        # 4. Fire
         _upstash_request(cmds)
-        
-        # 5. Mark tracked
         st.session_state["_av_tracked"] = True
+
     except Exception:
-        pass # Fail open
+        pass  # Fail open — never break the host app due to analytics errors.
 
 def get_stats():
     """Retrieve the required 6 metrics from Redis."""
