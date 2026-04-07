@@ -855,36 +855,110 @@ def main():
         if st.session_state.get("mobile_view", False):
             render_mobile_cards(final_display)
         else:
-            desktop_display = final_display.drop(columns=['ticker_raw'], errors='ignore')
+            # Recreate formatted dataframe for Desktop exactly like AP Pipeline
+            def _fmt_ma_with_icon(price, ma_val, atr14_pct=None):
+                try: price, ma_val = float(price), float(ma_val)
+                except: return "—"
+                if ma_val == 0: return "—"
+                atr = None
+                if atr14_pct is not None:
+                    try: 
+                        a = float(atr14_pct)
+                        if a > 0 and price > 0: atr = price * (a / 100.0)
+                    except: pass
+                if atr and atr > 0:
+                    diff = (price - ma_val) / atr
+                    if diff > 0.5: icon = "🟢"
+                    elif diff >= 0: icon = "🟡"
+                    elif diff >= -0.5: icon = "🟠"
+                    else: icon = "🔴"
+                else: icon = "🟡" if price > ma_val else "🟠"
+                return f"{icon} ${ma_val:.2f}"
+
+            def _fmt_rsi_with_icon(rsi):
+                try: val = float(rsi)
+                except: return "—"
+                if val < 30: return f"🟣 {val:.0f}"
+                elif val > 70: return f"🔴 {val:.0f}"
+                return f"🟡 {val:.0f}"
+
+            def _fmt_vol_with_icon(vol_ratio):
+                try: val = float(vol_ratio)
+                except: return "—"
+                return f"{val:.1f}x"
+
+            def _fmt_earnings_with_icon(earnings_str):
+                us_date = format_us_date(earnings_str)
+                if not us_date or us_date == "TBD" or us_date == "N/A": return "TBD"
+                # Keep current parsed local format but guess if urgent
+                try:
+                    # Best effort DTE
+                    import re; from datetime import datetime
+                    clean = re.search(r"(\d+)/(\d+)/(\d+)", us_date)
+                    if clean:
+                        m, d, y = clean.groups()
+                        y = f"20{y}" if len(y) == 2 else y
+                        d_obj = datetime(int(y), int(m), int(d))
+                        dte = (d_obj.date() - datetime.today().date()).days
+                        if 0 <= dte <= 7: return f"⚠️ {us_date}"
+                        elif 0 < dte <= 21: return f"📅 {us_date}"
+                except: pass
+                return us_date
+
+            formatted_rows = []
+            for _, r in final_display.iterrows():
+                pr = r.get("price")
+                atr = r.get("atr14_pct")
+                # Need Return % from raw df
+                raw_return = r.get("Return %", "N/A") if "Return %" in df.columns else "N/A"
+                
+                formatted_rows.append({
+                    "Ticker": r["ticker"],
+                    "Pick Date": r.get("picked_date", ""),
+                    "Price": pr,
+                    "Hold %": raw_return,
+                    "Hold": r.get("hold_streak_days", 0),
+                    "Earnings": _fmt_earnings_with_icon(r.get("earnings", "")),
+                    "EMA21": _fmt_ma_with_icon(pr, r.get("ema21"), atr),
+                    "EMA55": _fmt_ma_with_icon(pr, r.get("ema55"), atr),
+                    "SMA200": _fmt_ma_with_icon(pr, r.get("sma200"), atr),
+                    "RSI": _fmt_rsi_with_icon(r.get("rsi14")),
+                    "ATR%": atr,
+                    "Vol": _fmt_vol_with_icon(r.get("vol")),
+                    "Quant": r.get("quant", "⚪ —"),
+                    "Val": r.get("value_grade", "—"),
+                    "Gro": r.get("growth_grade", "—"),
+                    "Pro": r.get("profitability_grade", "—"),
+                    "Mom": r.get("momentum_grade", "—"),
+                    "Rev": r.get("eps_revisions_grade", "—")
+                })
+            
+            desktop_display = pd.DataFrame(formatted_rows)
             st.dataframe(
                 desktop_display,
                 column_config={
-                    'ticker': st.column_config.TextColumn('Ticker', width='small'),
-                    'picked_date': st.column_config.TextColumn('Picked', width='small'),
-                    'price': st.column_config.NumberColumn('Price', width='small', format='$%.2f'),
-                    'hold_streak_days': st.column_config.NumberColumn('Hold', width='small', format='%.0f'),
-                    'earnings': st.column_config.TextColumn('Earnings', width='small'),
-                    'ema21': st.column_config.TextColumn('EMA21', width='small'),
-                    'ema55': st.column_config.TextColumn('EMA55', width='small'),
-                    'sma200': st.column_config.TextColumn('SMA200', width='small'),
-                    'rsi14': st.column_config.NumberColumn(
-                        'RSI',
-                        width='small',
-                        format='%.0f',
-                        help='>70 overbought, <30 oversold'
-                    ),
-                    'atr14_pct': st.column_config.NumberColumn('ATR%', width='small', format='%.1f%%'),
-                    'vol': st.column_config.NumberColumn('Vol', width='small', format='%.1fx'),
-                    'quant': st.column_config.TextColumn('Quant', width='small'),
-                    'value_grade': st.column_config.TextColumn('Val', width='small'),
-                    'growth_grade': st.column_config.TextColumn('Gro', width='small'),
-                    'profitability_grade': st.column_config.TextColumn('Pro', width='small'),
-                    'momentum_grade': st.column_config.TextColumn('Mom', width='small'),
-                    'eps_revisions_grade': st.column_config.TextColumn('Rev', width='small')
+                    "Ticker": st.column_config.TextColumn("Ticker", width=70),
+                    "Pick Date": st.column_config.TextColumn("Pick Date", width=88),
+                    "Price": st.column_config.NumberColumn("Price", width=68, format="$%.2f"),
+                    "Hold %": st.column_config.TextColumn("Hold %", width=60),
+                    "Hold": st.column_config.NumberColumn("Hold", width=48, format="%.0f"),
+                    "Earnings": st.column_config.TextColumn("Earnings", width=115),
+                    "EMA21": st.column_config.TextColumn("EMA21", width=90),
+                    "EMA55": st.column_config.TextColumn("EMA55", width=90),
+                    "SMA200": st.column_config.TextColumn("SMA200", width=95),
+                    "RSI": st.column_config.TextColumn("RSI", width=62),
+                    "ATR%": st.column_config.NumberColumn("ATR%", width=50, format="%.1f%%"),
+                    "Vol": st.column_config.TextColumn("Vol", width=52),
+                    "Quant": st.column_config.TextColumn("Quant", width=135),
+                    "Val": st.column_config.TextColumn("Val", width=55),
+                    "Gro": st.column_config.TextColumn("Gro", width=55),
+                    "Pro": st.column_config.TextColumn("Pro", width=55),
+                    "Mom": st.column_config.TextColumn("Mom", width=55),
+                    "Rev": st.column_config.TextColumn("Rev", width=55)
                 },
                 use_container_width=True,
                 hide_index=True,
-                height=500
+                height=850
             )
 
     else:
