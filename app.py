@@ -905,6 +905,17 @@ def main():
                 except: pass
                 return us_date
 
+            def _fmt_grade_with_icon(g):
+                g = str(g or "").strip().upper()
+                if g in ("", "N/A", "NONE", "—"): return "⚪ —"
+                if g.startswith("A"): icon = "🟢"
+                elif g.startswith("B"): icon = "🟡"
+                elif g.startswith("C"): icon = "🟠"
+                elif g.startswith("D"): icon = "🔴"
+                elif g == "F": icon = "⚫"
+                else: icon = "⚪"
+                return f"{icon} {g}"
+
             formatted_rows = []
             for _, r in final_display.iterrows():
                 pr = r.get("price")
@@ -917,7 +928,6 @@ def main():
                     "Pick Date": r.get("picked_date", ""),
                     "Price": pr,
                     "Hold %": raw_return,
-                    "Hold": r.get("hold_streak_days", 0),
                     "Earnings": _fmt_earnings_with_icon(r.get("earnings", "")),
                     "EMA21": _fmt_ma_with_icon(pr, r.get("ema21"), atr),
                     "EMA55": _fmt_ma_with_icon(pr, r.get("ema55"), atr),
@@ -926,11 +936,11 @@ def main():
                     "ATR%": atr,
                     "Vol": _fmt_vol_with_icon(r.get("vol")),
                     "Quant": r.get("quant", "⚪ —"),
-                    "Val": r.get("value_grade", "—"),
-                    "Gro": r.get("growth_grade", "—"),
-                    "Pro": r.get("profitability_grade", "—"),
-                    "Mom": r.get("momentum_grade", "—"),
-                    "Rev": r.get("eps_revisions_grade", "—")
+                    "Val": _fmt_grade_with_icon(r.get("value_grade")),
+                    "Gro": _fmt_grade_with_icon(r.get("growth_grade")),
+                    "Pro": _fmt_grade_with_icon(r.get("profitability_grade")),
+                    "Mom": _fmt_grade_with_icon(r.get("momentum_grade")),
+                    "Rev": _fmt_grade_with_icon(r.get("eps_revisions_grade"))
                 })
             
             desktop_display = pd.DataFrame(formatted_rows)
@@ -941,7 +951,6 @@ def main():
                     "Pick Date": st.column_config.TextColumn("Pick Date", width=88),
                     "Price": st.column_config.NumberColumn("Price", width=68, format="$%.2f"),
                     "Hold %": st.column_config.TextColumn("Hold %", width=60),
-                    "Hold": st.column_config.NumberColumn("Hold", width=48, format="%.0f"),
                     "Earnings": st.column_config.TextColumn("Earnings", width=115),
                     "EMA21": st.column_config.TextColumn("EMA21", width=90),
                     "EMA55": st.column_config.TextColumn("EMA55", width=90),
