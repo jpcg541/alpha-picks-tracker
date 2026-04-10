@@ -674,8 +674,9 @@ def main():
                 flags=re.IGNORECASE
             )
         
-        # --- Remove the strategy link from the summary (Public View Safety) ---
-        summary_text = re.sub(r"\n📊 Full strategy view & live metrics: https://.*", "", summary_text)
+        # --- Remove dashboard links from summary (Public View Safety) ---
+        summary_text = re.sub(r"\n📊 Full strategy view \& live metrics: https://.*", "", summary_text)
+        summary_text = re.sub(r"\nFull dashboard: https?://\S+", "", summary_text)
         # -----------------------------------------------
 
         if st.session_state.get("mobile_view", False):
@@ -687,13 +688,22 @@ def main():
                 st.code(summary_text, language="markdown")
         st.divider()
 
-    # --- 1. Focus List (Interactive) ---
+    # --- 1. Focus List (Interactive) — v3.0 Radar Schema ---
     if not st.session_state.get("mobile_view", False):
-        st.markdown("### Focus List (Top 8)")
-        st.caption("Scan format: Ticker | Setup | Tech | Distance | Catalyst | Urgency")
-    
+        st.markdown("### Focus List")
+        st.caption("Scan format: Ticker | Bucket | Verdict | Labels | Bias% | RVOL | EMA21")
+
     focus_items = data.get("focus_view_model", [])
-    
+
+    # ── Bucket / verdict icon maps (mirror focus_list.py constants) ──────────
+    _BUCKET_ICON   = {"ADD_MOMENTUM": "🟢", "BTD": "🟡", "RISK_OFF": "🟥"}
+    _VERDICT_ICON  = {"ADD": "🟢", "HOLD_STRONG": "🟢", "WATCH": "🟡", "TRIM": "🟠", "RISK_OFF": "🔴"}
+    _BUCKET_HEADER = {
+        "ADD_MOMENTUM": "🟢 Add / Momentum Leaders",
+        "BTD":          "🟡 Buy-the-Dip Watchlist",
+        "RISK_OFF":     "🟥 Reduce / Risk-Off",
+    }
+
     if focus_items:
         ticker_list = [item.get('symbol') for item in focus_items if item.get('symbol')]
         if not ticker_list:
@@ -708,7 +718,7 @@ def main():
             st.subheader("Key APs to watch")
 
         selected_ticker = st.selectbox(
-            "Select Ticker to Deep Dive",
+            "Select Ticker for Deep Dive",
             options=ticker_list,
             index=ticker_list.index(st.session_state.focus_selected) if st.session_state.focus_selected in ticker_list else 0,
             key="focus_navigator",
@@ -717,95 +727,89 @@ def main():
         if selected_ticker:
             st.session_state.focus_selected = selected_ticker
 
+        # ── Compact Scan Table (v3.0 schema fields) ───────────────────────
         scan_rows = []
         for t_data in focus_items:
-            sym = t_data.get("symbol", "")
-            trend_c = t_data.get("ui_indicators", {}).get("trend_color", "GRAY")
-            tags = t_data.get("summary_tags", [])
-            setup_str = f"[{trend_c}] " + " ".join(tags[:2])
-            
-            tech_h = t_data.get("panel", {}).get("evidence", {}).get("trend_health", "").split(",")[0]
-            dist = t_data.get("summary_bias_pct")
-            dist_str = f"{dist:+.1f}%" if dist is not None else "N/A"
-            
-            cat = t_data.get("external_intel", {}).get("catalyst_tag", "—")
-            headline = t_data.get("external_intel", {}).get("headline", "")
-            cat_full = f"{cat}: {headline}" if headline else cat
-            if len(cat_full) > 50:
-                cat_full = cat_full[:47] + "..."
-                
+            sym    = t_data.get("symbol", "")
+            bucket = t_data.get("bucket", "")
+            verdict = t_data.get("verdict", "")
+            labels = " ".join((t_data.get("labels") or [])[:4])
+            bias   = t_data.get("bias_pct")
+            rvol   = t_data.get("rvol")
+            ema21  = t_data.get("ema21")
             scan_rows.append({
-                "Ticker": mask_ticker(sym),
-                "Setup": setup_str,
-                "Tech Health": tech_h,
-                "Distance": dist_str,
-                "Catalyst": cat_full,
-                "Urgency": int(t_data.get("urgency_score", 0))
+                "Ticker":  mask_ticker(sym),
+                "Bucket":  f"{_BUCKET_ICON.get(bucket, '⚪')} {bucket}",
+                "Verdict": f"{_VERDICT_ICON.get(verdict, '⚪')} {verdict}",
+                "Labels":  labels,
+                "Bias%":   f"{bias:+.1f}%" if bias is not None else "N/A",
+                "RVOL":    f"{rvol:.2f}x"  if rvol  is not None else "N/A",
+                "EMA21":   f"${ema21:.2f}" if ema21  is not None else "N/A",
             })
 
         scan_df = pd.DataFrame(scan_rows)
-        st.dataframe(scan_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            scan_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Ticker":  st.column_config.TextColumn("Ticker",  width=70),
+                "Bucket":  st.column_config.TextColumn("Bucket",  width=140),
+                "Verdict": st.column_config.TextColumn("Verdict", width=120),
+                "Labels":  st.column_config.TextColumn("Labels",  width=200),
+                "Bias%":   st.column_config.TextColumn("Bias%",   width=65),
+                "RVOL":    st.column_config.TextColumn("RVOL",    width=65),
+                "EMA21":   st.column_config.TextColumn("EMA21",   width=75),
+            }
+        )
 
         if not st.session_state.get("mobile_view", False):
             st.divider()
 
-        # Deep Dive using LLM Schema
-        detail_data = next((t for t in focus_items if t.get("symbol") == selected_ticker), None)
+        # ── Detail Panel (v3.0 schema) ────────────────────────────────────
+        detail = next((t for t in focus_items if t.get("symbol") == selected_ticker), None)
 
-        if detail_data:
-            playbook = detail_data.get("panel", {}).get("playbook", {})
-            ev = detail_data.get("panel", {}).get("evidence", {})
-            ext = detail_data.get("external_intel", {})
-            logic = detail_data.get("logic_pillars", {})
+        if detail:
+            bucket  = detail.get("bucket", "")
+            verdict = detail.get("verdict", "")
+            labels  = detail.get("labels") or []
+            bias    = detail.get("bias_pct")
+            rvol    = detail.get("rvol")
+            ema21   = detail.get("ema21")
 
-            st.markdown("### Deep Dive")
+            st.markdown(
+                f"#### {_BUCKET_ICON.get(bucket, '⚪')} {mask_ticker(selected_ticker)} "
+                f"— {_VERDICT_ICON.get(verdict, '⚪')} {verdict}"
+            )
 
-            # [A] STATE
-            st.markdown("**[A] STATE**")
-            stance_tag = playbook.get("stance", detail_data.get("verdict", "WATCH"))
-            dist_val = detail_data.get("summary_bias_pct")
-            dist_side = "below SMA200" if (dist_val is not None and dist_val < 0) else "above SMA200"
-            impact = ext.get("impact_nature", "")
-            event_suffix = f" — Event Impact: {impact}" if impact else ""
-            st.markdown(f"`{stance_tag}` — Trend {dist_side}, {ev.get('trend_health', '')}{event_suffix}")
+            # Metrics row
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Bucket",      bucket.replace("_", " "))
+            c2.metric("Bias SMA200", f"{bias:+.1f}%" if bias  is not None else "N/A")
+            c3.metric("RVOL20",      f"{rvol:.2f}x"  if rvol  is not None else "N/A")
+            c4.metric("EMA21",       f"${ema21:.2f}" if ema21 is not None else "N/A")
 
-            # [B] WHY IT MATTERS
-            st.markdown("**[B] WHY IT MATTERS**")
-            tech_note = logic.get("technical", "")
-            news_note = logic.get("news_catalyst", "")
-            st.caption(f"{tech_note}")
-            if news_note:
-                st.caption(f"*Context*: {news_note}")
+            if labels:
+                st.caption(f"**Labels:** {' | '.join(labels)}")
 
-            # [C] EVIDENCE
-            st.markdown("**[C] EVIDENCE**")
-            st.caption(f"**Price**: {ev.get('price_action', '—')}")
-            st.caption(f"**Volume**: {ev.get('volume_conviction', '—')}")
-            st.caption(f"**News Detail**: {ext.get('headline', '—')} ({ext.get('headline_age', '—')})")
-            
-            div = detail_data.get("divergence_audit", {})
-            div_str = div.get("note", "None") if div.get("is_divergent") else "No divergence identified."
-            st.caption(f"**Divergence**: {div_str}")
+            # [A] Technical Reasoning
+            st.markdown("**[A] Technical Reasoning**")
+            st.caption(detail.get("reasoning") or "—")
 
-            # [D] PLAYBOOK
-            st.markdown("**[D] PLAYBOOK**")
-            triggers_raw = playbook.get("trigger", "")
-            t_lines = triggers_raw.split("|")
-            for t in t_lines:
-                if t.strip(): st.caption(f"{t.strip()}")
-            st.caption(f"**Execution Horizon**: {playbook.get('execution_horizon', '—')}")
+            # [B] Event Context
+            if detail.get("event"):
+                st.markdown("**[B] Event Context**")
+                st.info(detail["event"])
 
-            # [E] RISK CONTEXT
-            st.markdown("**[E] RISK CONTEXT**")
-            ext_sum = ext.get("summary", "No external catalyst risk provided.")
-            st.caption(f"**Catalyst Summary**: {ext_sum}")
-            st.caption(f"**Urgency Score**: {detail_data.get('urgency_score', 0)}")
-            
+            # [C] Recovery Trigger / Catalyst
+            if detail.get("recovery_trigger"):
+                st.markdown("**[C] Recovery Trigger**")
+                st.success(f"Entry signal: {detail['recovery_trigger']}")
+
         else:
             st.info("Select a ticker to view details.")
 
     else:
-        # Dynamic Message from Snapshot
         focus_msg = meta.get("focus_message", "No active signals in Focus List.")
         st.info(focus_msg)
 
@@ -916,13 +920,16 @@ def main():
                 else: icon = "⚪"
                 return f"{icon} {g}"
 
+            # Preserve 'Return %' before reindex loses it (it's not in expected_cols)
+            return_pct_series = df["Return %"].fillna("N/A") if "Return %" in df.columns else pd.Series("N/A", index=df.index)
+
             formatted_rows = []
-            for _, r in final_display.iterrows():
+            for idx, r in final_display.iterrows():
                 pr = r.get("price")
                 atr = r.get("atr14_pct")
-                # Need Return % from raw df
-                raw_return = r.get("Return %", "N/A") if "Return %" in df.columns else "N/A"
-                
+                # Read Hold% from the pre-rename raw df via shared index
+                raw_return = return_pct_series.get(idx, "N/A")
+
                 formatted_rows.append({
                     "Ticker": r["ticker"],
                     "Pick Date": r.get("picked_date", ""),
