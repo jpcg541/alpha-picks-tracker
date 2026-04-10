@@ -266,27 +266,39 @@ def strip_evidence_refs(text: str) -> str:
     return cleaned
 
 def mask_ticker(ticker: str) -> str:
+    """
+    Mask rules:
+      1 char  → show as-is          (e.g. A  → A)
+      2 chars → first + *            (e.g. AI → A*)
+      3 chars → first + * + last     (e.g. AMD → A*D)
+      4 chars → first + * + last     (e.g. NVDA → N*A)
+      5+ chars→ first + * + last     (e.g. GOOGL → G*L)
+    Exception: BRK.B → B**.B
+    Dot-separated: each part masked by the same rules.
+    """
     if ticker is None:
         return ""
     value = str(ticker).strip().upper()
     if not value:
         return ""
-    
-    # NEW: Handle dot-separated tickers like BRK.B
+
+    # Hardcoded exception
+    if value == "BRK.B":
+        return "B**.B"
+
+    # Dot-separated (e.g. other class-share tickers)
     if "." in value:
         parts = value.split(".")
-        # Mask each part separately, e.g., BRK.B -> B**.B* or similar
-        # To match user vibe of keeping it recognizable but hidden
         masked_parts = [mask_ticker(p) if p else "*" for p in parts]
         return ".".join(masked_parts)
 
     length = len(value)
-    if length <= 2:
-        return value[0] + "*"
-    if length == 3:
-        return value[0] + "**"
-    # For 4+: Preserve start and end, stars in middle
-    return f"{value[0]}{'*' * (length - 2)}{value[-1]}"
+    if length == 1:
+        return value                          # A → A
+    if length == 2:
+        return value[0] + "*"                 # AI → A*
+    # 3+ chars: first + single * + last
+    return value[0] + "*" + value[-1]         # AMD → A*D, NVDA → N*A
 
 
 def format_us_date(date_str: str) -> str:
