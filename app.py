@@ -691,41 +691,21 @@ def main():
     # --- 1. Focus List (Interactive) — v3.0 Radar Schema ---
     if not st.session_state.get("mobile_view", False):
         st.markdown("### Focus List")
-        st.caption("Scan format: Ticker | Bucket | Verdict | Labels | Bias% | RVOL | EMA21")
+        st.caption("**Labels:** BD200 = below SMA200 · AB200 = above SMA200 · DVG = divergence signal")
+
 
     focus_items = data.get("focus_view_model", [])
 
-    # ── Bucket / verdict icon maps (mirror focus_list.py constants) ──────────
+    # ── Bucket / verdict / trend icon maps (mirror focus_list.py constants) ──
     _BUCKET_ICON   = {"ADD_MOMENTUM": "🟢", "BTD": "🟡", "RISK_OFF": "🟥"}
     _VERDICT_ICON  = {"ADD": "🟢", "HOLD_STRONG": "🟢", "WATCH": "🟡", "TRIM": "🟠", "RISK_OFF": "🔴"}
-    _BUCKET_HEADER = {
-        "ADD_MOMENTUM": "🟢 Add / Momentum Leaders",
-        "BTD":          "🟡 Buy-the-Dip Watchlist",
-        "RISK_OFF":     "🟥 Reduce / Risk-Off",
-    }
+    _TREND_ICON    = {"RED": "🔴", "GREEN": "🟢", "GRAY": "⚫"}
 
     if focus_items:
-        ticker_list = [item.get('symbol') for item in focus_items if item.get('symbol')]
-        if not ticker_list:
-            st.info("No focus tickers available.")
-            return
-
-        if 'focus_selected' not in st.session_state or st.session_state.focus_selected not in ticker_list:
-            st.session_state.focus_selected = ticker_list[0]
-
         if st.session_state.get("mobile_view", False):
             st.caption(f"Last Synced: {updated_at}")
             st.subheader("Key APs to watch")
 
-        selected_ticker = st.selectbox(
-            "Select Ticker for Deep Dive",
-            options=ticker_list,
-            index=ticker_list.index(st.session_state.focus_selected) if st.session_state.focus_selected in ticker_list else 0,
-            key="focus_navigator",
-            label_visibility="collapsed" if st.session_state.get("mobile_view", False) else "visible"
-        )
-        if selected_ticker:
-            st.session_state.focus_selected = selected_ticker
 
         # ── Compact Scan Table (v3.0 schema fields) ───────────────────────
         scan_rows = []
@@ -737,6 +717,8 @@ def main():
             bias   = t_data.get("bias_pct")
             rvol   = t_data.get("rvol")
             ema21  = t_data.get("ema21")
+            trend_c = t_data.get("trend_color", "GRAY")
+            event   = t_data.get("event") or "—"
             scan_rows.append({
                 "Ticker":  mask_ticker(sym),
                 "Bucket":  f"{_BUCKET_ICON.get(bucket, '⚪')} {bucket}",
@@ -745,6 +727,8 @@ def main():
                 "Bias%":   f"{bias:+.1f}%" if bias is not None else "N/A",
                 "RVOL":    f"{rvol:.2f}x"  if rvol  is not None else "N/A",
                 "EMA21":   f"${ema21:.2f}" if ema21  is not None else "N/A",
+                "Trend":   _TREND_ICON.get(trend_c, "⚫"),
+                "Event":   event,
             })
 
         scan_df = pd.DataFrame(scan_rows)
@@ -760,54 +744,13 @@ def main():
                 "Bias%":   st.column_config.TextColumn("Bias%",   width=65),
                 "RVOL":    st.column_config.TextColumn("RVOL",    width=65),
                 "EMA21":   st.column_config.TextColumn("EMA21",   width=75),
+                "Trend":   st.column_config.TextColumn("Trend",   width=55),
+                "Event":   st.column_config.TextColumn("Event",   width=180),
             }
         )
 
         if not st.session_state.get("mobile_view", False):
             st.divider()
-
-        # ── Detail Panel (v3.0 schema) ────────────────────────────────────
-        detail = next((t for t in focus_items if t.get("symbol") == selected_ticker), None)
-
-        if detail:
-            bucket  = detail.get("bucket", "")
-            verdict = detail.get("verdict", "")
-            labels  = detail.get("labels") or []
-            bias    = detail.get("bias_pct")
-            rvol    = detail.get("rvol")
-            ema21   = detail.get("ema21")
-
-            st.markdown(
-                f"#### {_BUCKET_ICON.get(bucket, '⚪')} {mask_ticker(selected_ticker)} "
-                f"— {_VERDICT_ICON.get(verdict, '⚪')} {verdict}"
-            )
-
-            # Metrics row
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Bucket",      bucket.replace("_", " "))
-            c2.metric("Bias SMA200", f"{bias:+.1f}%" if bias  is not None else "N/A")
-            c3.metric("RVOL20",      f"{rvol:.2f}x"  if rvol  is not None else "N/A")
-            c4.metric("EMA21",       f"${ema21:.2f}" if ema21 is not None else "N/A")
-
-            if labels:
-                st.caption(f"**Labels:** {' | '.join(labels)}")
-
-            # [A] Technical Reasoning
-            st.markdown("**[A] Technical Reasoning**")
-            st.caption(detail.get("reasoning") or "—")
-
-            # [B] Event Context
-            if detail.get("event"):
-                st.markdown("**[B] Event Context**")
-                st.info(detail["event"])
-
-            # [C] Recovery Trigger / Catalyst
-            if detail.get("recovery_trigger"):
-                st.markdown("**[C] Recovery Trigger**")
-                st.success(f"Entry signal: {detail['recovery_trigger']}")
-
-        else:
-            st.info("Select a ticker to view details.")
 
     else:
         focus_msg = meta.get("focus_message", "No active signals in Focus List.")
