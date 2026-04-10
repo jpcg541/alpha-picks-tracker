@@ -297,8 +297,9 @@ def mask_ticker(ticker: str) -> str:
         return value                          # A → A
     if length == 2:
         return value[0] + "*"                 # AI → A*
-    # 3+ chars: first + single * + last
-    return value[0] + "*" + value[-1]         # AMD → A*D, NVDA → N*A
+    
+    # 3+ chars: first + stars matching middle length + last
+    return f"{value[0]}{'*' * (length - 2)}{value[-1]}"
 
 
 def format_us_date(date_str: str) -> str:
