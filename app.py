@@ -647,11 +647,9 @@ def main():
         # If is_mobile is None, we do nothing this run.
         # Streamlit will likely rerun when st_javascript returns the value.
 
-    # --- Analytics: track only after session is stable (post-rerun) ---
-    # Placing this AFTER the first_load/st.rerun() block ensures we never
-    # count the transient first-run session that is immediately discarded.
-    from analytics import track_visit_once_per_session
-    track_visit_once_per_session()
+    # --- Analytics: traffic tracking disabled (display removed) ---
+    # from analytics import track_visit_once_per_session
+    # track_visit_once_per_session()
 
     # User requested removal of manual toggle to rely on auto-detection
     # use_mobile = st.toggle("📱 View", value=st.session_state.get("mobile_view", False), key="mobile_view_toggle")
@@ -995,8 +993,8 @@ def main():
             else:
                 st.error("Incorrect Password")
 
-    # --- Admin Panel ---
-    _show_admin_panel()
+    # --- Admin Panel (traffic stats display disabled) ---
+    # _show_admin_panel()
 
 if __name__ == "__main__":
     main()
