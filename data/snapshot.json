@@ -1,6 +1,6 @@
 {
   "meta": {
-    "updated_at": "2026-04-17 23:01:50",
+    "updated_at": "2026-04-17 23:08:32",
     "updated_at_tz": "America/New_York",
     "focus_message": "",
     "focus_summary_text": "\ud83d\udd25 Weekly AP Quant Radar \u2014 Technical Focus List\n\n\ud83d\udcc5 [Earnings in 2W]:\n\u2022 $TTMI  ER in 12d  (2026-04-29)\n\u2022 $SKYW  ER in 6d  (2026-04-23)\n\u2022 $TMUS  ER in 11d  (2026-04-28)\n\u2022 $RCL  ER in 11d  (2026-04-28)\n\u2022 $W  ER in 13d  (2026-04-30)\n\n\u23f0 [AP-Clock - Near 180d Hold Limit]:\n  NONE\n\n\ud83d\udfe2 Add / Momentum Leaders\n\u2022 $LITE | ADD | AB200+MOMENTUM+STRONG_BUY | Bias +162.8% | Vol 0.60x | \ud83d\udcac Uptrend intact: +162.8% vs SMA200, above EMA21 (+11.3%). Strong Buy quant.\n\u2022 $NEXA | ADD | AB200+MOMENTUM+STRONG_BUY | Bias +102.7% | Vol 2.49x | \ud83d\udcac Citi target raised\n\u2022 $POWL | ADD | AB200+MOMENTUM | Bias +92.1% | Vol 1.24x | \ud83d\udcac Uptrend intact: +92.1% vs SMA200, above EMA21 (+16.0%), RVOL 1.24x. Hold quant.\n\u2022 $AGX | ADD | AB200+MOMENTUM | Bias +79.4% | Vol 0.76x | \ud83d\udcac Uptrend intact: +79.4% vs SMA200, above EMA21 (+7.6%). Hold quant.\n\u2022 $TTMI | ADD | AB200+MOMENTUM+STRONG_BUY | Bias +77.2% | Vol 0.90x | \ud83d\udcac earnings April 29\n\n\ud83d\udfe1 Buy-the-Dip Watchlist\n\u2022 $SKYW | HOLD_STRONG | BD200+RECOVERY | Bias -3.6% | Vol 0.75x | \ud83d\udcac earnings next week\n\u2022 $APP | HOLD_STRONG | BD200+RECOVERY+DVG | Bias -8.2% | Vol 0.89x | \ud83d\udcac Argus initiation\n\n\ud83d\udfe5 Reduce / Risk-Off\n\u2022 $TMUS | RISK_OFF | BD200+BROKEN+NEAR_EMA21 | Bias -8.9% | Vol 0.81x | \ud83d\udcac KeyBanc upgrade\n\u2022 $RCL | RISK_OFF | BD200+BROKEN+HIGH_RVOL | Bias -5.1% | Vol 1.88x | \ud83d\udcac UBS target cut\n\u2022 $W | RISK_OFF | BD200+BROKEN+HIGH_RVOL | Bias -5.4% | Vol 1.60x | \ud83d\udcac Stifel target cut\n\u2022 $WLDN | RISK_OFF | BD200+BROKEN+HIGH_RVOL | Bias -21.0% | Vol 1.78x | \ud83d\udcac $27M NYC contract\n\u2022 $BRK.B | TRIM | BD200+BROKEN+NEAR_EMA21 | Bias -3.2% | Vol 1.32x | \ud83d\udcac Mild weakness: -3.2% vs SMA200, below EMA55. Hold quant.\n\n\ud83d\udccd Recovery / Watch Levels (EMA21):\n  \u2022 SKYW  watch support @ $94.71 (EMA21)\n  \u2022 APP  watch support @ $428.82 (EMA21)\n  \u2022 TMUS  break above $201.11 (EMA21) to repair\n  \u2022 RCL  break above $278.16 (EMA21) to repair\n  \u2022 W  break above $75.48 (EMA21) to repair\n  \u2022 WLDN  break above $80.57 (EMA21) to repair\n  \u2022 BRK.B  break above $479.54 (EMA21) to repair\n",
@@ -18,7 +18,7 @@
         "LOW_RVOL"
       ],
       "reasoning": "Uptrend intact: +162.8% vs SMA200, above EMA21 (+11.3%). Strong Buy quant.",
-      "event": "Uptrend intact: +162.8% vs SMA200, above EMA21 (+11.3%). Strong Buy quant.",
+      "event": null,
       "bias_pct": 162.82,
       "rvol": 0.5987313379910498,
       "ema21": 803.0273854250062,
@@ -53,7 +53,7 @@
         "MOMENTUM"
       ],
       "reasoning": "Uptrend intact: +92.1% vs SMA200, above EMA21 (+16.0%), RVOL 1.24x. Hold quant.",
-      "event": "Uptrend intact: +92.1% vs SMA200, above EMA21 (+16.0%), RVOL 1.24x. Hold quant.",
+      "event": null,
       "bias_pct": 92.06,
       "rvol": 1.2366591283044515,
       "ema21": 207.7703108389688,
@@ -69,7 +69,7 @@
         "MOMENTUM"
       ],
       "reasoning": "Uptrend intact: +79.4% vs SMA200, above EMA21 (+7.6%). Hold quant.",
-      "event": "Uptrend intact: +79.4% vs SMA200, above EMA21 (+7.6%). Hold quant.",
+      "event": null,
       "bias_pct": 79.37,
       "rvol": 0.7565543169130183,
       "ema21": 555.4290723272906,
@@ -211,7 +211,7 @@
         "NEAR_EMA21"
       ],
       "reasoning": "Mild weakness: -3.2% vs SMA200, below EMA55. Hold quant.",
-      "event": "Mild weakness: -3.2% vs SMA200, below EMA55. Hold quant.",
+      "event": null,
       "bias_pct": -3.18,
       "rvol": 1.317096224523035,
       "ema21": 479.54479140915225,
