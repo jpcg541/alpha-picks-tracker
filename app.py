@@ -597,7 +597,7 @@ def build_focus_options(focus_items: list) -> tuple[list, dict]:
         t_raw = item.get('ticker')
         if not t_raw:
             continue
-        t_display = mask_ticker(t_raw)
+        t_display = t_raw
         verdict_display = format_verdict_label(item.get('verdict', 'WATCH'))
         picked_display = format_picked_label(item.get('picked_date'))
         label = f"{t_display} | Picked {picked_display} | {verdict_display}"
@@ -680,7 +680,7 @@ def main():
             # Single-pass substitution using a lambda to prevent masking a mask
             summary_text = re.sub(
                 rf"\b({pattern})\b", 
-                lambda m: mask_ticker(m.group(0)), 
+                lambda m: m.group(0), 
                 summary_text, 
                 flags=re.IGNORECASE
             )
@@ -731,7 +731,7 @@ def main():
             trend_c = t_data.get("trend_color", "GRAY")
             event   = t_data.get("event") or "—"
             scan_rows.append({
-                "Ticker":  mask_ticker(sym),
+                "Ticker":  sym,
                 "Bucket":  f"{_BUCKET_ICON.get(bucket, '⚪')} {bucket}",
                 "Verdict": f"{_VERDICT_ICON.get(verdict, '⚪')} {verdict}",
                 "Labels":  labels,
@@ -807,7 +807,7 @@ def main():
 
         ticker_raw = final_display['ticker'].fillna('').astype(str).str.strip().str.upper()
         final_display['ticker_raw'] = ticker_raw
-        final_display['ticker'] = ticker_raw.apply(mask_ticker)
+        final_display['ticker'] = ticker_raw
         
         # Strict Config Copy from Dashboard.py
         if st.session_state.get("mobile_view", False):
